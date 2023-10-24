@@ -1,12 +1,17 @@
+import datetime
 import flet as ft
 from signin_form import *
 from signup_form import *
 from users_db import *
 from chat_message import *
+import predict
+import complaint
+users_list = [{"user": "Sakthi", "password": "sakthi",
+               "mobile": '044-45985645'}, {"user": "prakash", "password": "prakash", "mobile": '85497826352'}]
 
 
 def main(page: ft.Page):
-    page.title = "Chat Flet Messenger"
+    page.title = "Safe Messenger"
     page.vertical_alignment = ft.MainAxisAlignment.CENTER
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
 
@@ -57,23 +62,87 @@ def main(page: ft.Page):
     def on_message(message: Message):
         if message.message_type == "chat_message":
             m = ChatMessage(message)
-        elif message.message_type == "login_message":
-            m = ft.Text(message.text, italic=True, color=ft.colors.WHITE, size=12)
+        else:
+            m = ft.Text(message.text, italic=True,
+                        color=ft.colors.WHITE, size=12)
+
         chat.controls.append(m)
         page.update()
 
     page.pubsub.subscribe(on_message)
+    warning_count = {}
 
     def send_message_click(e):
-        page.pubsub.send_all(
-            Message(
-                user=page.session.get("user"),
-                text=new_message.value,
-                message_type="chat_message",
-            )
-        )
-        new_message.value = ""
-        page.update()
+        message = new_message.value
+        prediction = predict.predict_text(message)
+
+        # Track the number of warnings given to the user
+        user = page.session.get("user")
+        if prediction > 50:
+
+            if user in warning_count:
+                warning_count[user] += 1
+            else:
+                warning_count[user] = 1
+
+                # Show an alert message to the user if the warning count is greater than 0
+            if warning_count[user] < 3:
+                page.pubsub.send_all(
+                    Message(
+                        user=page.session.get("user"),
+                        text="The message doesn't follow the policy of the company. You have {} warnings remaining.".format(
+                            3 - warning_count[user]),
+                        message_type="alert",
+                    )
+                )
+
+            # If the warning count is equal to 3, generate a complaint document and remove the user from the chat room
+            elif warning_count[user] == 3:
+                for u in users_list:
+                    if u["user"] == page.session.get("user"):
+                        number = u["mobile"]
+                        break
+                complaint.generate_complaint_document(
+                    page.session.get("user"), number, message, datetime.datetime.now())
+                page.pubsub.send_all(
+                    Message(
+                        user=page.session.get("user"),
+                        text="You are banned from the chat room due to incomplaince with company policy.Your future messages will not reflect in the chat room",
+                        message_type="alert",
+                    )
+                )
+            else:
+                page.pubsub.send_all(
+                    Message(
+                        user=page.session.get("user"),
+                        text="You were banned from the chat room due to incomplaince with company policy",
+                        message_type="alert",
+                    )
+                )
+
+        else:
+            if user in warning_count and warning_count[user] >= 3:
+                page.pubsub.send_all(
+                    Message(
+                        user=page.session.get("user"),
+                        text="You were banned from the chat room due to incomplaince with company policy",
+                        message_type="alert",
+                    )
+                )
+            else:
+                page.pubsub.send_all(
+                    Message(
+                        user=page.session.get("user"),
+                        text=message,
+                        message_type="chat_message",
+                    )
+                )
+
+            # Clear the message input field
+            new_message.value = ""
+
+            # Update the page
+            page.update()
 
     def btn_signin(e):
         page.route = "/"
@@ -88,11 +157,11 @@ def main(page: ft.Page):
         page.route = "/"
         page.update()
 
-    # ************          Aplication UI              **********************************
     principal_content = ft.Column(
         [
             ft.Icon(ft.icons.WECHAT, size=200, color=ft.colors.BLUE),
-            ft.Text(value="Chat Flet Messenger", size=50, color=ft.colors.WHITE),
+            ft.Text(value="Safe Messenger",
+                    size=50, color=ft.colors.BLACK),
         ],
         height=400,
         width=600,
@@ -189,7 +258,6 @@ def main(page: ft.Page):
         on_dismiss=lambda e: print("Dialog dismissed!"),
     )
 
-    # ****************        Routes              ******************
     def route_change(route):
         if page.route == "/":
             page.clean()
@@ -215,7 +283,8 @@ def main(page: ft.Page):
                 page.add(
                     ft.Row(
                         [
-                            ft.Text(value="Chat Flet Messenger", color=ft.colors.WHITE),
+                            ft.Text(value="Safe Messenger",
+                                    color=ft.colors.WHITE),
                             ft.ElevatedButton(
                                 text="Log Out",
                                 bgcolor=ft.colors.RED_800,
@@ -254,7 +323,8 @@ def main(page: ft.Page):
 
     page.on_route_change = route_change
     page.add(
-        ft.Row([principal_content, signin_UI], alignment=ft.MainAxisAlignment.CENTER)
+        ft.Row([principal_content, signin_UI],
+               alignment=ft.MainAxisAlignment.CENTER)
     )
 
 

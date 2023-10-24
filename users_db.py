@@ -1,16 +1,15 @@
 class UsersDB():
-    users_list=[{"user":"mario","password":"mario1"},{"user":"peach","password":"peach1"}]
+    users_list = [{"user": "Sakthi", "password": "sakthi",
+                   "mobile": '044-45985645'}, {"user": "prakash", "password": "prakash", "mobile": '85497826352'}]
 
-    def read_db(self,user_name:str,password:str):
-        #print("Iniciando sesion.... ")
+    def read_db(self, user_name: str, password: str):
+        # print("Iniciando sesion.... ")
         for i in self.users_list:
-            if (i["user"]==user_name and i["password"]==password):
+            if (i["user"] == user_name and i["password"] == password):
                 return True
         return False
-    
-  
-    def write_db(self,user_name:str,password:str):
-        #print("Creando usuario...")
-        self.users_list.append({"user":user_name,"password":password})
-        return True
 
+    def write_db(self, user_name: str, password: str):
+        # print("Creando usuario...")
+        self.users_list.append({"user": user_name, "password": password})
+        return True
