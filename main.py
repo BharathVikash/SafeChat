@@ -6,21 +6,24 @@ from users_db import *
 from chat_message import *
 import predict
 import complaint
+
 users_list = [{"user": "Sakthi", "password": "sakthi",
                "mobile": '044-45985645'}, {"user": "prakash", "password": "prakash", "mobile": '85497826352'}]
 
 
 def main(page: ft.Page):
+    print("main")
     page.title = "Safe Messenger"
     page.vertical_alignment = ft.MainAxisAlignment.CENTER
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
 
-    # ***************  Functions             *************
     def dropdown_changed(e):
         new_message.value = new_message.value + emoji_list.value
         page.update()
 
     def close_banner(e):
+
+        print("close b")
         page.banner.open = False
         page.update()
 
@@ -53,9 +56,9 @@ def main(page: ft.Page):
             )
             page.update()
 
-    def sign_up(user: str, password: str):
+    def sign_up(user: str, password: str, mobile):
         db = UsersDB()
-        if db.write_db(user, password):
+        if db.write_db(user, password, mobile):
             print("Successfully Registered User...")
             open_dlg()
 
@@ -90,24 +93,21 @@ def main(page: ft.Page):
                 page.pubsub.send_all(
                     Message(
                         user=page.session.get("user"),
-                        text="The message doesn't follow the policy of the company. You have {} warnings remaining.".format(
-                            3 - warning_count[user]),
+                        text=f"The message doesn't follow the policy of the company.{user} has {3 - warning_count[user]} warnings remaining.",
                         message_type="alert",
                     )
                 )
 
             # If the warning count is equal to 3, generate a complaint document and remove the user from the chat room
             elif warning_count[user] == 3:
-                for u in users_list:
-                    if u["user"] == page.session.get("user"):
-                        number = u["mobile"]
-                        break
+                db = UsersDB()
+                number = db.getNumber(page.session.get("user"))
                 complaint.generate_complaint_document(
                     page.session.get("user"), number, message, datetime.datetime.now())
                 page.pubsub.send_all(
                     Message(
                         user=page.session.get("user"),
-                        text="You are banned from the chat room due to incomplaince with company policy.Your future messages will not reflect in the chat room",
+                        text=f"{user} is banned from the chat room due to incomplaince with company policy.Their future messages will not reflect in the chat room",
                         message_type="alert",
                     )
                 )
@@ -115,7 +115,7 @@ def main(page: ft.Page):
                 page.pubsub.send_all(
                     Message(
                         user=page.session.get("user"),
-                        text="You were banned from the chat room due to incomplaince with company policy",
+                        text="This message is not displayed due to company policy",
                         message_type="alert",
                     )
                 )

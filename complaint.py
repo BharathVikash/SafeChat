@@ -4,7 +4,8 @@ from reportlab.lib.styles import getSampleStyleSheet
 
 
 def generate_complaint_document(name, mobile_number, message, time):
-    doc = SimpleDocTemplate("cyberbullying_complaint.pdf", pagesize=letter)
+    doc = SimpleDocTemplate(
+        f"{name}_cyberbullying_complaint.pdf", pagesize=letter)
     story = []
 
     # Set font and text styles
@@ -34,7 +35,7 @@ def generate_complaint_document(name, mobile_number, message, time):
     story.append(Paragraph("Complaint Details:", styles['Heading2']))
     story.append(Paragraph(complaint_text, normal_style))
 
-    story.append(Spacer(1, 12))  # Add some space
+    story.append(Spacer(1, 12))
 
     story.append(Paragraph("Signature: ________________", normal_style))
     story.append(Paragraph("Date: ________________", normal_style))
