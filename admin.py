@@ -7,7 +7,7 @@ import hashlib
 from admin_signin import SignInForm
 from google.cloud.firestore_v1.base_query import FieldFilter
 cred = credentials.Certificate(
-    "bullyprotect-b925b-firebase-adminsdk-evorn-308e4bbf98.json")
+    "YOUR_FIREBASE_API_KEY.json")
 firebase_admin.initialize_app(cred)
 print("ADMIN ONLINE!")
 
