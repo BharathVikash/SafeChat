@@ -1,16 +1,12 @@
 import flet as ft
 
-# SignIn Form
-
 
 class SignInForm(ft.UserControl):
-    def __init__(self, submit_values, req_unban, btn_signup):
+    def __init__(self, submit_values):
         super().__init__()
         # Return values user and password
         self.submit_values = submit_values
         # Route to Sign Up Form
-        self.btn_signup = btn_signup
-        self.req_unban = req_unban
 
     def btn_signin(self, e):
         if not self.text_user.value:
@@ -22,17 +18,6 @@ class SignInForm(ft.UserControl):
         else:
             # Return values 'user' and 'password' as arguments
             self.submit_values(self.text_user.value, self.text_password.value)
-
-    def btn_raise(self, e):
-        if not self.text_user.value:
-            self.text_user.error_text = "Name cannot be blank!"
-            self.text_user.update()
-        if not self.text_password.value:
-            self.text_password.error_text = "Password cannot be blank!"
-            self.text_password.update()
-        else:
-            # Return values 'user' and 'password' as arguments
-            self.req_unban(self.text_user.value, self.text_password.value)
 
     def build(self):
         self.signin_image = ft.Container(
@@ -52,14 +37,11 @@ class SignInForm(ft.UserControl):
         )
         self.text_signin = ft.ElevatedButton(
             text="Sign in", color=ft.colors.WHITE, width=150, height=50, on_click=self.btn_signin)
-        self.text_raise = ft.ElevatedButton(
-            text="Request Unban", color=ft.colors.WHITE, width=150, height=50, on_click=self.btn_raise)
-        self.text_signup = ft.Row(controls=[ft.Text(value="Don't have an account?"), ft.TextButton(
-            text="Sign Up Here", on_click=self.btn_signup)], alignment=ft.MainAxisAlignment.CENTER)
 
         return ft.Container(
+            margin=85,
             width=500,
-            height=620,
+            height=580,
             bgcolor=ft.colors.TEAL_800,
             padding=30,
             border_radius=10,
@@ -72,10 +54,8 @@ class SignInForm(ft.UserControl):
                     self.text_password,
                     ft.Container(height=10),
                     self.text_signin,
-
-                    self.text_raise,
                     ft.Container(height=20),
-                    self.text_signup,
+
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             ),

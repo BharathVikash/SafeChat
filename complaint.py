@@ -1,23 +1,28 @@
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
+import os
 
 
-def generate_complaint_document(name, mobile_number, message, time):
-    doc = SimpleDocTemplate(
-        f"{name}_cyberbullying_complaint.pdf", pagesize=letter)
+def generate_complaint_document(name, mobile_number, message, time, output_directory="  Complains"):
+    # Create the specified output directory if it doesn't exist
+    os.makedirs(output_directory, exist_ok=True)
+
+    # Construct the file path with the specified directory
+    file_path = os.path.join(
+        output_directory, f"{name}_cyberbullying_complaint.pdf")
+
+    doc = SimpleDocTemplate(file_path, pagesize=letter)
     story = []
 
-    # Set font and text styles
     styles = getSampleStyleSheet()
     normal_style = styles['Normal']
 
-    # Add content to the PDF
     complaint_title = Paragraph(
         "Complaint Against Cyberbullying", styles['Title'])
     story.append(complaint_title)
 
-    story.append(Spacer(1, 12))  # Add some space
+    story.append(Spacer(1, 12))
 
     story.append(Paragraph(f"Name of the Bully: {name}", normal_style))
     story.append(
@@ -31,7 +36,7 @@ def generate_complaint_document(name, mobile_number, message, time):
         "I request immediate action against the offender to prevent further harassment."
     )
 
-    story.append(Spacer(1, 12))  # Add some space
+    story.append(Spacer(1, 12))
     story.append(Paragraph("Complaint Details:", styles['Heading2']))
     story.append(Paragraph(complaint_text, normal_style))
 
@@ -41,6 +46,8 @@ def generate_complaint_document(name, mobile_number, message, time):
     story.append(Paragraph("Date: ________________", normal_style))
 
     doc.build(story)
+    print(
+        f"Complaint document generated in the '{output_directory}' directory as '{file_path}'.")
 
 
 if __name__ == "__main__":
@@ -50,4 +57,3 @@ if __name__ == "__main__":
     time = input("Enter the time the message was written: ")
 
     generate_complaint_document(name, mobile_number, message, time)
-    print("Complaint document generated as 'cyberbullying_complaint.pdf'.")

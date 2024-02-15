@@ -2,28 +2,43 @@ import datetime
 import flet as ft
 from signin_form import *
 from signup_form import *
-from users_db import *
 from chat_message import *
 import predict
 import complaint
+import firebase_admin
+from firebase_admin import credentials
+from firebase_admin import firestore
+import hashlib
+cred = credentials.Certificate(
+    "bullyprotect-b925b-firebase-adminsdk-evorn-308e4bbf98.json")
+firebase_admin.initialize_app(cred)
 
-users_list = [{"user": "Sakthi", "password": "sakthi",
-               "mobile": '044-45985645'}, {"user": "prakash", "password": "prakash", "mobile": '85497826352'}]
+print("Server in ONLINE!")
+
+db = firestore.client()
 
 
 def main(page: ft.Page):
-    print("main")
+    def sha256_hash(input_string):
+
+        sha256 = hashlib.sha256()
+
+        sha256.update(input_string.encode('utf-8'))
+
+        hashed_string = sha256.hexdigest()
+
+        return hashed_string
     page.title = "Safe Messenger"
     page.vertical_alignment = ft.MainAxisAlignment.CENTER
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
 
     def dropdown_changed(e):
+
         new_message.value = new_message.value + emoji_list.value
         page.update()
 
     def close_banner(e):
 
-        print("close b")
         page.banner.open = False
         page.update()
 
@@ -37,12 +52,50 @@ def main(page: ft.Page):
         page.route = "/"
         page.update()
 
+    def open_aff():
+        page.dialog = aff
+        aff.open = True
+        page.update()
+
+    def close_aff(e):
+        aff.open = False
+        page.route = "/"
+        page.update()
+
+    def req_unban(user, password):
+        users_ref = db.collection("users").document(user)
+        docs = users_ref.get()
+        data = docs.to_dict()
+        if data["password"] != sha256_hash(password):
+            ShowBanner("Password Incorrect")
+        elif not docs.exists:
+            ShowBanner("User Not Found")
+        elif not data["is_banned"]:
+            ShowBanner("User is not banned")
+        else:
+            users_ref.update({"raised": True})
+            open_aff()
+
     def sign_in(user: str, password: str):
-        db = UsersDB()
-        if not db.read_db(user, password):
-            print("User no exist ...")
-            page.banner.open = True
-            page.update()
+        users_ref = db.collection("users").document(user)
+        docs = users_ref.get()
+        auth = False
+        ban = False
+        msg = 'No user with the Username Found!'
+        if docs.exists:
+            auth = True
+            msg = ''
+            data = docs.to_dict()
+            if data["password"] != sha256_hash(password):
+                auth = False
+                msg = "Log in failed, Incorrect User Name or Password"
+            if data["is_banned"]:
+                ban = True
+                msg = "You have been Banned from the chat room!"
+        if not auth or ban:
+            ShowBanner(msg)
+            print("LOG ERR")
+
         else:
             print("Redirecting to chat...")
             page.session.set("user", user)
@@ -57,8 +110,10 @@ def main(page: ft.Page):
             page.update()
 
     def sign_up(user: str, password: str, mobile):
-        db = UsersDB()
-        if db.write_db(user, password, mobile):
+
+        doc_ref = db.collection("users").document(user)
+
+        if doc_ref.set({"username": user, "password": sha256_hash(password), "mobile": mobile, "is_banned": False, "warnings": 0, "prev_bans": 0, "total_warnings": 0}):
             print("Successfully Registered User...")
             open_dlg()
 
@@ -73,35 +128,35 @@ def main(page: ft.Page):
         page.update()
 
     page.pubsub.subscribe(on_message)
-    warning_count = {}
 
     def send_message_click(e):
+        db = firestore.client()
         message = new_message.value
         prediction = predict.predict_text(message)
-
-        # Track the number of warnings given to the user
         user = page.session.get("user")
+        users_ref = db.collection("users").document(user)
+        docs = users_ref.get()
+        data = docs.to_dict()
+        # Track the number of warnings given to the user
+        warning_count = data["warnings"]
         if prediction > 50:
 
-            if user in warning_count:
-                warning_count[user] += 1
-            else:
-                warning_count[user] = 1
+            users_ref.update({"warnings": warning_count+1})
 
-                # Show an alert message to the user if the warning count is greater than 0
-            if warning_count[user] < 3:
+            # Show an alert message to the user if the warning count is greater than 0
+            if warning_count < 3:
                 page.pubsub.send_all(
                     Message(
                         user=page.session.get("user"),
-                        text=f"The message doesn't follow the policy of the company.{user} has {3 - warning_count[user]} warnings remaining.",
+                        text=f"The message doesn't follow the policy of the company.{user} has {3 - warning_count} warnings remaining.",
                         message_type="alert",
                     )
                 )
 
             # If the warning count is equal to 3, generate a complaint document and remove the user from the chat room
-            elif warning_count[user] == 3:
-                db = UsersDB()
-                number = db.getNumber(page.session.get("user"))
+            elif warning_count == 3:
+
+                number = data["mobile"]
                 complaint.generate_complaint_document(
                     page.session.get("user"), number, message, datetime.datetime.now())
                 page.pubsub.send_all(
@@ -111,6 +166,13 @@ def main(page: ft.Page):
                         message_type="alert",
                     )
                 )
+                users_ref.update({"is_banned": True})
+                users_ref.update({
+                                 "prev_bans": data["prev_bans"]+1})
+                users_ref.update({"message": message})
+                page.session.remove("user")
+                page.route = "/"
+                page.update()
             else:
                 page.pubsub.send_all(
                     Message(
@@ -121,11 +183,11 @@ def main(page: ft.Page):
                 )
 
         else:
-            if user in warning_count and warning_count[user] >= 3:
+            if warning_count >= 3:
                 page.pubsub.send_all(
                     Message(
                         user=page.session.get("user"),
-                        text="You were banned from the chat room due to incomplaince with company policy",
+                        text="This message is not displayed due to company policy",
                         message_type="alert",
                     )
                 )
@@ -207,7 +269,7 @@ def main(page: ft.Page):
         color=ft.colors.AMBER,
     )
 
-    signin_UI = SignInForm(sign_in, btn_signup)
+    signin_UI = SignInForm(sign_in, req_unban, btn_signup)
     signup_UI = SignUpForm(sign_up, btn_signin)
 
     chat = ft.ListView(
@@ -227,14 +289,17 @@ def main(page: ft.Page):
         on_submit=send_message_click,
     )
 
-    page.banner = ft.Banner(
-        bgcolor=ft.colors.BLACK45,
-        leading=ft.Icon(ft.icons.ERROR, color=ft.colors.RED, size=40),
-        content=ft.Text("Log in failed, Incorrect User Name or Password"),
-        actions=[
-            ft.TextButton("Ok", on_click=close_banner),
-        ],
-    )
+    def ShowBanner(msg):
+        page.banner = ft.Banner(
+            bgcolor=ft.colors.BLACK45,
+            leading=ft.Icon(ft.icons.ERROR, color=ft.colors.RED, size=40),
+            content=ft.Text(msg),
+            actions=[
+                ft.TextButton("Ok", on_click=close_banner),
+            ],
+        )
+        page.banner.open = True
+        page.update()
 
     dlg = ft.AlertDialog(
         modal=True,
@@ -257,8 +322,31 @@ def main(page: ft.Page):
         actions_alignment="center",
         on_dismiss=lambda e: print("Dialog dismissed!"),
     )
+    aff = ft.AlertDialog(
+        modal=True,
+        title=ft.Container(
+            content=ft.Icon(
+                name=ft.icons.CHECK_CIRCLE_OUTLINED, color=ft.colors.GREEN, size=100
+            ),
+            width=120,
+            height=120,
+        ),
+        content=ft.Text(
+            value="Request Raised!",
+            text_align=ft.TextAlign.CENTER,
+        ),
+        actions=[
+            ft.ElevatedButton(
+                text="Continue", color=ft.colors.WHITE, on_click=close_aff
+            )
+        ],
+        actions_alignment="center",
+        on_dismiss=lambda e: print("Dialog dismissed!"),
+    )
 
     def route_change(route):
+        if page.route == "/admin":
+            admin.initialize()
         if page.route == "/":
             page.clean()
             page.add(
@@ -328,4 +416,4 @@ def main(page: ft.Page):
     )
 
 
-ft.app(target=main, view=ft.WEB_BROWSER)
+ft.app(target=main, view=ft.WEB_BROWSER, )
