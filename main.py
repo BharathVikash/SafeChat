@@ -10,7 +10,7 @@ from firebase_admin import credentials
 from firebase_admin import firestore
 import hashlib
 cred = credentials.Certificate(
-    "bullyprotect-b925b-firebase-adminsdk-evorn-308e4bbf98.json")
+    "your_firebase_API_key.json")
 firebase_admin.initialize_app(cred)
 
 print("Server in ONLINE!")
