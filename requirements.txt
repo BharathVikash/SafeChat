@@ -5,3 +5,5 @@ joblib>=1.1.0
 reportlab>=3.6.0
 pandas>=1.4.0
 numpy>=1.22.0
+hashlib
+firebase-admin
