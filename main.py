@@ -10,7 +10,7 @@ from firebase_admin import credentials
 from firebase_admin import firestore
 import hashlib
 cred = credentials.Certificate(
-    "your_firebase_API_key.json")
+    "bullyprotect-b925b-firebase-adminsdk-evorn-71768e7dd1.json")
 firebase_admin.initialize_app(cred)
 
 print("Server in ONLINE!")
@@ -415,5 +415,21 @@ def main(page: ft.Page):
                alignment=ft.MainAxisAlignment.CENTER)
     )
 
+import socket
 
-ft.app(target=main, view=ft.WEB_BROWSER, )
+def find_free_port(start=5000, end=6000):
+    for port in range(start, end + 1):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(('', port))
+                return port
+            except OSError:
+                continue
+    return None
+
+if __name__ == "__main__":
+    free_port = find_free_port()
+    if free_port:
+        ft.app(target=main, port=free_port,view=ft.AppView.WEB_BROWSER)
+    else:
+        print("No free ports available in the range 5000-6000")

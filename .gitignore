@@ -1,3 +1,9 @@
 *.pdf
 complains/*.pdf
-bullyprotect-b925b-firebase-adminsdk-evorn-308e4bbf98.json
+bullyprotect-b925b-firebase-adminsdk-evorn-71768e7dd1.json
+.dockerignore
+Dockerfile
+__pycache__/
+Screenshots
+venv
+

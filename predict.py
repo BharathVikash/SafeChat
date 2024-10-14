@@ -11,7 +11,7 @@ tokenizer = joblib.load('tokenizer.pkl')
 
 
 # Load the saved model for making predictions
-loaded_model = keras.models.load_model('predict.h5')
+loaded_model = keras.models.load_model('model.h5')
 
 tokenizer = tokenizer  # Replace with your tokenizer
 max_sequence_length = 100  # Replace with your max_sequence_length
@@ -26,3 +26,7 @@ def predict_text(input_text):
     prediction = loaded_model.predict(input_padded)
 
     return prediction[0][0]*100
+
+
+if __name__=='__main__':
+    print(predict_text("Hello there"))
